@@ -24,6 +24,16 @@ export function LoginPage() {
     try {
       await login(values.email, values.password);
       toast({ title: "Sessão iniciada", description: "Bem-vindo ao painel executivo." });
+    } catch (error: any) {
+      const message = error.message === "Invalid login credentials" 
+        ? "E-mail ou senha inválidos. Verifique seus dados." 
+        : "Ocorreu um erro ao tentar entrar. Tente novamente.";
+      
+      toast({ 
+        title: "Falha no acesso", 
+        description: message,
+        variant: "destructive" 
+      });
     } finally {
       setLoading(false);
     }
