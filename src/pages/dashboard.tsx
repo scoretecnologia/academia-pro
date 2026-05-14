@@ -29,15 +29,15 @@ export function DashboardPage() {
 
   return (
     <div className="grid gap-5">
-      <div className="flex flex-col gap-4 rounded-2xl border bg-foreground p-5 text-background shadow-[0_22px_55px_rgba(15,23,42,0.16)] dark:bg-card sm:p-6 lg:flex-row lg:items-end lg:justify-between">
+      <div className="flex flex-col gap-4 rounded-2xl border bg-card p-5 text-card-foreground shadow-[0_8px_30px_rgb(0,0,0,0.04)] sm:p-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-background/65 dark:text-primary">Dashboard gestor</p>
-          <h1 className="mt-2 max-w-3xl text-3xl font-black tracking-tight sm:text-4xl">Central executiva de receita, metas e performance tecnica</h1>
+          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-primary">Dashboard gestor</p>
+          <h1 className="mt-2 max-w-3xl text-3xl font-black tracking-tight sm:text-4xl text-foreground">Central executiva de receita, metas e performance técnica</h1>
         </div>
         <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3 lg:w-[420px]">
-          <div className="rounded-xl bg-white/10 p-3"><p className="text-background/60">Receita</p><p className="font-black">{currency.format(data.metrics.monthRevenue)}</p></div>
-          <div className="rounded-xl bg-white/10 p-3"><p className="text-background/60">Metas</p><p className="font-black">{percentage(data.metrics.goalCompletion)}</p></div>
-          <div className="rounded-xl bg-white/10 p-3"><p className="text-background/60">Fichas</p><p className="font-black">{data.metrics.teacherRecords}</p></div>
+          <div className="rounded-xl bg-muted/50 p-3"><p className="text-muted-foreground font-medium">Receita</p><p className="font-black text-foreground">{currency.format(data.metrics.monthRevenue)}</p></div>
+          <div className="rounded-xl bg-muted/50 p-3"><p className="text-muted-foreground font-medium">Metas</p><p className="font-black text-foreground">{percentage(data.metrics.goalCompletion)}</p></div>
+          <div className="rounded-xl bg-muted/50 p-3"><p className="text-muted-foreground font-medium">Fichas</p><p className="font-black text-foreground">{data.metrics.teacherRecords}</p></div>
         </div>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
