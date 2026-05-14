@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useMemo, useState, type ReactNo
 import { CheckCircle2, Info, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
-type Toast = { id: string; title: string; description?: string };
+type Toast = { id: string; title: string; description?: string; variant?: "default" | "destructive" };
 type ToastContextValue = { toast: (toast: Omit<Toast, "id">) => void };
 
 const ToastContext = createContext<ToastContextValue | null>(null);
@@ -29,10 +29,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               initial={{ opacity: 0, y: -12, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -12, scale: 0.98 }}
-              className="glass-panel rounded-xl p-4"
+              className={`glass-panel rounded-xl border p-4 ${item.variant === "destructive" ? "border-destructive/20 bg-destructive/5" : "border-border bg-background/60"}`}
             >
               <div className="flex gap-3">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 text-accent" />
+                {item.variant === "destructive" ? (
+                  <X className="mt-0.5 h-5 w-5 text-destructive" />
+                ) : (
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 text-accent" />
+                )}
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold">{item.title}</p>
                   {item.description ? <p className="mt-1 text-sm text-muted-foreground">{item.description}</p> : null}
