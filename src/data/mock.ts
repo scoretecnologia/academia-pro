@@ -9,12 +9,12 @@ export const users: AppUser[] = [
 ];
 
 export const sales: Sale[] = [
-  { id: "s1", sellerId: "u2", sellerName: "Lucas Almeida", studentName: "Ana Martins", saleType: "Aluno novo", plan: "Anual com recorrencia", value: 2388, soldAt: "2026-05-02", createdAt: "2026-05-02" },
+  { id: "s1", sellerId: "u2", sellerName: "Lucas Almeida", studentName: "Ana Martins", saleType: "Aluno novo", plan: "Anual com recorrência", value: 2388, soldAt: "2026-05-02", createdAt: "2026-05-02" },
   { id: "s2", sellerId: "u3", sellerName: "Bianca Reis", studentName: "Pedro Lima", saleType: "Upgrade", plan: "Semestral", value: 1090, soldAt: "2026-05-04", createdAt: "2026-05-04" },
-  { id: "s3", sellerId: "u2", sellerName: "Lucas Almeida", studentName: "Joao Freitas", saleType: "Renovacao", plan: "Trimestral", value: 597, soldAt: "2026-05-06", createdAt: "2026-05-06" },
-  { id: "s4", sellerId: "u3", sellerName: "Bianca Reis", studentName: "Livia Souza", saleType: "Aluno novo", plan: "Quadrimestral com recorrencia", value: 796, soldAt: "2026-05-07", createdAt: "2026-05-07" },
-  { id: "s5", sellerId: "u2", sellerName: "Lucas Almeida", studentName: "Bruno Castro", saleType: "Reativacao", plan: "Mensal", value: 229, soldAt: "2026-05-09", createdAt: "2026-05-09" },
-  { id: "s6", sellerId: "u3", sellerName: "Bianca Reis", studentName: "Carolina Dias", saleType: "Aluno novo", plan: "Anual com recorrencia", value: 2388, soldAt: "2026-05-11", createdAt: "2026-05-11" },
+  { id: "s3", sellerId: "u2", sellerName: "Lucas Almeida", studentName: "Joao Freitas", saleType: "Renovação", plan: "Trimestral", value: 597, soldAt: "2026-05-06", createdAt: "2026-05-06" },
+  { id: "s4", sellerId: "u3", sellerName: "Bianca Reis", studentName: "Livia Souza", saleType: "Aluno novo", plan: "Quadrimestral com recorrência", value: 796, soldAt: "2026-05-07", createdAt: "2026-05-07" },
+  { id: "s5", sellerId: "u2", sellerName: "Lucas Almeida", studentName: "Bruno Castro", saleType: "Reativação", plan: "Mensal", value: 229, soldAt: "2026-05-09", createdAt: "2026-05-09" },
+  { id: "s6", sellerId: "u3", sellerName: "Bianca Reis", studentName: "Carolina Dias", saleType: "Aluno novo", plan: "Anual com recorrência", value: 2388, soldAt: "2026-05-11", createdAt: "2026-05-11" },
 ];
 
 export const salesGoals: SalesGoal[] = [
