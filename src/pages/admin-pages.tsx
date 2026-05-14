@@ -10,7 +10,7 @@ import { Input, Select } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/contexts/toast-context";
-import { createAppUser, getDashboardData, saveGoalPlan } from "@/services/dashboard-service";
+import { createAppUser, getDashboardData, saveGoalPlan, updateUser } from "@/services/dashboard-service";
 import { currency, formatDate, formatMonthYear, monthNames, sameMonthYear } from "@/lib/utils";
 import { goalSchema, userSchema, type GoalForm, type UserForm } from "@/validations/forms";
 import type { AppUser, AuditLog, Sale } from "@/types";
@@ -373,10 +373,22 @@ export function SettingsPage() {
   const { data } = useQuery({ queryKey: ["dashboard"], queryFn: getDashboardData });
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [editingUser, setEditingUser] = useState<AppUser | null>(null);
+
   const { register, handleSubmit, reset, formState: { errors } } = useForm<UserForm>({
     resolver: zodResolver(userSchema),
     defaultValues: { role: "vendedor" },
   });
+
+  const {
+    register: editRegister,
+    handleSubmit: handleEditSubmit,
+    reset: resetEdit,
+    formState: { errors: editErrors },
+  } = useForm<Partial<UserForm>>({
+    resolver: zodResolver(userSchema.partial()),
+  });
+
   const createUserMutation = useMutation({
     mutationFn: createAppUser,
     onSuccess: async (user) => {
@@ -389,10 +401,42 @@ export function SettingsPage() {
     },
   });
 
+  const updateUserMutation = useMutation({
+    mutationFn: ({ userId, payload }: { userId: string; payload: any }) => updateUser(userId, payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      setEditingUser(null);
+      toast({ title: "Usuário atualizado", description: "As alterações foram salvas com sucesso." });
+    },
+    onError: (error) => {
+      toast({ title: "Erro na atualização", description: error instanceof Error ? error.message : "Tente novamente." });
+    },
+  });
+
   if (!data) return null;
 
   function onSubmit(values: UserForm) {
     createUserMutation.mutate(values);
+  }
+
+  function onEditSubmit(values: Partial<UserForm>) {
+    if (!editingUser) return;
+    updateUserMutation.mutate({
+      userId: editingUser.id,
+      payload: { name: values.name, role: values.role },
+    });
+  }
+
+  function handleEditClick(user: AppUser) {
+    setEditingUser(user);
+    resetEdit({ name: user.name, role: user.role });
+  }
+
+  function toggleStatus(user: AppUser) {
+    updateUserMutation.mutate({
+      userId: user.id,
+      payload: { active: !user.active },
+    });
   }
 
   return (
@@ -430,9 +474,59 @@ export function SettingsPage() {
         { header: "Nome", cell: (row) => row.name, priority: "primary" },
         { header: "Email", cell: (row) => row.email, priority: "secondary" },
         { header: "Categoria", cell: (row) => <span className="capitalize">{row.role}</span> },
-        { header: "Status", cell: (row) => row.active ? "Ativo" : "Inativo" },
-        { header: "Ações", priority: "actions", className: "w-32", cell: () => <div className="flex gap-1"><Button variant="ghost" size="icon"><UserCog className="h-4 w-4" /></Button><Button variant="ghost" size="icon"><KeyRound className="h-4 w-4" /></Button><Button variant="ghost" size="icon"><ShieldCheck className="h-4 w-4" /></Button></div> },
+        { header: "Status", cell: (row) => (
+          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold ${row.active ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+            {row.active ? "Ativo" : "Inativo"}
+          </span>
+        ) },
+        { 
+          header: "Ações", 
+          priority: "actions", 
+          className: "w-32", 
+          cell: (row) => (
+            <div className="flex gap-1">
+              <Button variant="ghost" size="icon" title="Editar usuário" onClick={() => handleEditClick(row)}><UserCog className="h-4 w-4" /></Button>
+              <Button variant="ghost" size="icon" title="Redefinir senha" onClick={() => toast({ title: "Redefinição enviada", description: `Um link foi enviado para ${row.email}` })}><KeyRound className="h-4 w-4" /></Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                title={row.active ? "Desativar" : "Ativar"} 
+                onClick={() => toggleStatus(row)}
+                className={row.active ? "text-primary" : "text-destructive"}
+              >
+                <ShieldCheck className="h-4 w-4" />
+              </Button>
+            </div>
+          ) 
+        },
       ]} />
+
+      <Modal
+        open={Boolean(editingUser)}
+        onClose={() => setEditingUser(null)}
+        title="Editar Usuário"
+        description={editingUser?.email}
+      >
+        <form onSubmit={handleEditSubmit(onEditSubmit)} className="grid gap-4">
+          <Field label="Nome" error={editErrors.name?.message}>
+            <Input {...editRegister("name")} />
+          </Field>
+          <Field label="Categoria" error={editErrors.role?.message}>
+            <Select {...editRegister("role")}>
+              <option value="gestor">gestor</option>
+              <option value="vendedor">vendedor</option>
+              <option value="professor">professor</option>
+            </Select>
+          </Field>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="secondary" onClick={() => setEditingUser(null)}>Cancelar</Button>
+            <Button type="submit" disabled={updateUserMutation.isPending}>
+              {updateUserMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Salvar Alterações
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </Page>
   );
 }

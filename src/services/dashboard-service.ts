@@ -280,3 +280,32 @@ export async function saveGoalPlan(payload: {
   if (error) throw error;
   return { count: rows.length, type: "professor" as const };
 }
+
+export async function updateUser(userId: string, payload: Partial<Omit<AppUser, "id" | "createdAt" | "email">>) {
+  if (!supabase) throw new Error("Supabase is not configured");
+
+  const updateData: any = {};
+  if (payload.name !== undefined) updateData.nome = payload.name;
+  if (payload.role !== undefined) updateData.role = payload.role;
+  if (payload.active !== undefined) updateData.ativo = payload.active;
+  if (payload.avatarUrl !== undefined) updateData.avatar_url = payload.avatarUrl;
+
+  const { data, error } = await supabase
+    .from("users")
+    .update(updateData)
+    .eq("id", userId)
+    .select("*")
+    .single();
+
+  if (error) throw error;
+
+  return {
+    id: data.id,
+    name: data.nome,
+    email: data.email,
+    role: data.role,
+    active: data.ativo,
+    avatarUrl: data.avatar_url,
+    createdAt: data.created_at,
+  } as AppUser;
+}

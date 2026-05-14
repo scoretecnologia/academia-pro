@@ -80,7 +80,6 @@ export function LoginPage() {
             </label>
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Sessão persistente ativa</span>
-              <button type="button" className="font-semibold text-primary">Recuperar senha</button>
             </div>
             <Button type="submit" disabled={loading} className="mt-2 w-full">
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
