@@ -16,7 +16,7 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: "gestor@academiapro.com", password: "123456" },
+    defaultValues: { email: "", password: "" },
   });
 
   async function onSubmit(values: LoginForm) {
