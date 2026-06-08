@@ -374,6 +374,7 @@ export function SettingsPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [editingUser, setEditingUser] = useState<AppUser | null>(null);
+  const [confirmingStatusUser, setConfirmingStatusUser] = useState<AppUser | null>(null);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<UserForm>({
     resolver: zodResolver(userSchema),
@@ -470,7 +471,7 @@ export function SettingsPage() {
           </form>
         </CardContent>
       </Card>
-      <DataTable<AppUser> data={data.users} columns={[
+      <DataTable<AppUser> data={data.users.filter((user) => user.active)} columns={[
         { header: "Nome", cell: (row) => row.name, priority: "primary" },
         { header: "Email", cell: (row) => row.email, priority: "secondary" },
         { header: "Categoria", cell: (row) => <span className="capitalize">{row.role}</span> },
@@ -491,7 +492,7 @@ export function SettingsPage() {
                 variant="ghost" 
                 size="icon" 
                 title={row.active ? "Desativar" : "Ativar"} 
-                onClick={() => toggleStatus(row)}
+                onClick={() => setConfirmingStatusUser(row)}
                 className={row.active ? "text-primary" : "text-destructive"}
               >
                 <ShieldCheck className="h-4 w-4" />
@@ -526,6 +527,33 @@ export function SettingsPage() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        open={Boolean(confirmingStatusUser)}
+        onClose={() => setConfirmingStatusUser(null)}
+        title={confirmingStatusUser?.active ? "Inativar Usuário" : "Ativar Usuário"}
+        description={`Tem certeza que deseja ${confirmingStatusUser?.active ? "inativar" : "ativar"} o usuário ${confirmingStatusUser?.name}?`}
+      >
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="secondary" onClick={() => setConfirmingStatusUser(null)}>
+            Cancelar
+          </Button>
+          <Button 
+            type="button" 
+            variant={confirmingStatusUser?.active ? "destructive" : "default"} 
+            onClick={() => {
+              if (confirmingStatusUser) {
+                toggleStatus(confirmingStatusUser);
+                setConfirmingStatusUser(null);
+              }
+            }}
+            disabled={updateUserMutation.isPending}
+          >
+            {updateUserMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Confirmar
+          </Button>
+        </div>
       </Modal>
     </Page>
   );
