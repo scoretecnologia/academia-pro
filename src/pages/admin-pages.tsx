@@ -541,7 +541,7 @@ export function SettingsPage() {
           </Button>
           <Button 
             type="button" 
-            variant={confirmingStatusUser?.active ? "destructive" : "default"} 
+            variant={confirmingStatusUser?.active ? "danger" : "primary"} 
             onClick={() => {
               if (confirmingStatusUser) {
                 toggleStatus(confirmingStatusUser);
