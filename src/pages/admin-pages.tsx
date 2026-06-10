@@ -10,7 +10,7 @@ import { Input, Select } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/contexts/toast-context";
-import { createAppUser, getDashboardData, saveGoalPlan, updateUser } from "@/services/dashboard-service";
+import { createAppUser, getDashboardData, saveGoalPlan, updateUser, adminResetUserPassword } from "@/services/dashboard-service";
 import { currency, formatDate, formatMonthYear, monthNames, sameMonthYear } from "@/lib/utils";
 import { goalSchema, userSchema, type GoalForm, type UserForm } from "@/validations/forms";
 import type { AppUser, AuditLog, Sale } from "@/types";
@@ -387,6 +387,8 @@ export function SettingsPage() {
   const { toast } = useToast();
   const [editingUser, setEditingUser] = useState<AppUser | null>(null);
   const [confirmingStatusUser, setConfirmingStatusUser] = useState<AppUser | null>(null);
+  const [resettingPasswordUser, setResettingPasswordUser] = useState<AppUser | null>(null);
+  const [newPassword, setNewPassword] = useState("");
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<UserForm>({
     resolver: zodResolver(userSchema),
@@ -423,6 +425,18 @@ export function SettingsPage() {
     },
     onError: (error) => {
       toast({ title: "Erro na atualização", description: error instanceof Error ? error.message : "Tente novamente." });
+    },
+  });
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: ({ userId, password }: { userId: string; password: string }) => adminResetUserPassword(userId, password),
+    onSuccess: () => {
+      setResettingPasswordUser(null);
+      setNewPassword("");
+      toast({ title: "Senha redefinida", description: "A senha do usuário foi alterada com sucesso." });
+    },
+    onError: (error) => {
+      toast({ title: "Erro na redefinição", description: error instanceof Error ? error.message : "Tente novamente." });
     },
   });
 
@@ -499,7 +513,7 @@ export function SettingsPage() {
           cell: (row) => (
             <div className="flex gap-1">
               <Button variant="ghost" size="icon" title="Editar usuário" onClick={() => handleEditClick(row)}><UserCog className="h-4 w-4" /></Button>
-              <Button variant="ghost" size="icon" title="Redefinir senha" onClick={() => toast({ title: "Redefinição enviada", description: `Um link foi enviado para ${row.email}` })}><KeyRound className="h-4 w-4" /></Button>
+              <Button variant="ghost" size="icon" title="Redefinir senha" onClick={() => setResettingPasswordUser(row)}><KeyRound className="h-4 w-4" /></Button>
               <Button 
                 variant="ghost" 
                 size="icon" 
@@ -566,6 +580,37 @@ export function SettingsPage() {
             Confirmar
           </Button>
         </div>
+      </Modal>
+
+      <Modal
+        open={Boolean(resettingPasswordUser)}
+        onClose={() => { setResettingPasswordUser(null); setNewPassword(""); }}
+        title="Redefinir Senha"
+        description={`Alterando a senha de ${resettingPasswordUser?.name}`}
+      >
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          if (newPassword.length < 6) {
+            toast({ title: "Senha muito curta", description: "A senha precisa ter pelo menos 6 caracteres." });
+            return;
+          }
+          if (resettingPasswordUser) {
+            resetPasswordMutation.mutate({ userId: resettingPasswordUser.id, password: newPassword });
+          }
+        }} className="grid gap-4">
+          <Field label="Nova Senha">
+            <Input type="password" placeholder="Mínimo 6 caracteres" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+          </Field>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="secondary" onClick={() => { setResettingPasswordUser(null); setNewPassword(""); }}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={resetPasswordMutation.isPending}>
+              {resetPasswordMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Redefinir Senha
+            </Button>
+          </div>
+        </form>
       </Modal>
     </Page>
   );

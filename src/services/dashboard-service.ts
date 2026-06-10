@@ -309,3 +309,14 @@ export async function updateUser(userId: string, payload: Partial<Omit<AppUser, 
     createdAt: data.created_at,
   } as AppUser;
 }
+
+export async function adminResetUserPassword(userId: string, newPassword: string) {
+  if (!supabase) throw new Error("Supabase is not configured");
+
+  const { error } = await supabase.rpc("admin_reset_user_password", {
+    target_user_id: userId,
+    new_password: newPassword,
+  });
+
+  if (error) throw error;
+}
