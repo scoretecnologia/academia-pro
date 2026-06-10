@@ -23,7 +23,7 @@ export function SellersPage() {
   const { register, handleSubmit, reset, formState: { errors } } = useForm<SaleForm>({ resolver: zodResolver(saleSchema) });
   if (!data) return null;
 
-  const sellers = data.users.filter((user) => user.role === "vendedor");
+  const sellers = data.users.filter((user) => user.role === "vendedor" && user.active !== false);
   const rows = sellers.map((seller) => {
     const sellerSales = data.sales.filter((sale) => sale.sellerId === seller.id);
     const goal = data.salesGoals.find((item) => item.sellerId === seller.id);
@@ -85,7 +85,7 @@ export function SellersPage() {
         </div>
         <Select className="sm:w-56"><option>Este mes</option><option>Ultimos 90 dias</option><option>Ano atual</option></Select>
       </div>
-      <DataTable<Sale> data={data.sales} columns={[
+      <DataTable<Sale> data={data.sales.filter(s => data.users.find(u => u.id === s.sellerId)?.active !== false)} columns={[
         { header: "Vendedor", cell: (row) => row.sellerName, priority: "primary" },
         { header: "Aluno", cell: (row) => row.studentName, priority: "secondary" },
         { header: "Tipo", cell: (row) => row.saleType },

@@ -23,7 +23,7 @@ export function TeachersPage() {
   const { register, handleSubmit, reset, formState: { errors } } = useForm<TeacherRecordForm>({ resolver: zodResolver(teacherRecordSchema) });
   if (!data) return null;
 
-  const teachers = data.users.filter((user) => user.role === "professor");
+  const teachers = data.users.filter((user) => user.role === "professor" && user.active !== false);
   const rows = teachers.map((teacher) => {
     const total = data.teacherRecords.filter((record) => record.teacherId === teacher.id).reduce((sum, item) => sum + item.recordsCount, 0);
     const goal = data.teacherGoals.find((item) => item.teacherId === teacher.id);
@@ -71,7 +71,7 @@ export function TeachersPage() {
           );
         })}
       </div>
-      <DataTable<TeacherRecord> data={data.teacherRecords} columns={[
+      <DataTable<TeacherRecord> data={data.teacherRecords.filter(r => data.users.find(u => u.id === r.teacherId)?.active !== false)} columns={[
         { header: "Professor", cell: (row) => row.teacherName, priority: "primary" },
         { header: "Quantidade", cell: (row) => row.recordsCount, priority: "secondary" },
         { header: "Observação", cell: (row) => row.note ?? "Sem observação" },

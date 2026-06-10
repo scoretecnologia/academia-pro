@@ -134,7 +134,12 @@ export function GoalsPage() {
           <CardHeader><h2 className="font-bold">Metas de vendedores</h2></CardHeader>
           <CardContent className="max-h-[420px] overflow-y-auto pr-2">
             <div className="grid gap-4">
-            {data.salesGoals.map((goal) => {
+            {data.salesGoals
+              .filter(goal => {
+                const seller = data.users.find(u => u.id === goal.sellerId);
+                return seller?.active !== false; // If not found, keep it, but if inactive, hide
+              })
+              .map((goal) => {
               const seller = data.users.find((user) => user.id === goal.sellerId);
               const sellerName = seller?.name ?? "Vendedor";
               const total = data.sales
@@ -149,7 +154,12 @@ export function GoalsPage() {
           <CardHeader><h2 className="font-bold">Metas de professores</h2></CardHeader>
           <CardContent className="max-h-[420px] overflow-y-auto pr-2">
             <div className="grid gap-4">
-            {data.teacherGoals.map((goal) => {
+            {data.teacherGoals
+              .filter(goal => {
+                const teacher = data.users.find(u => u.id === goal.teacherId);
+                return teacher?.active !== false;
+              })
+              .map((goal) => {
               const teacher = data.users.find((user) => user.id === goal.teacherId);
               const teacherName = teacher?.name ?? "Professor";
               const total = data.teacherRecords
@@ -313,8 +323,8 @@ export function ReportsPage() {
         <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <Input type="date" />
           <Input type="date" />
-          <Select><option>Todos vendedores</option>{data.users.filter((u) => u.role === "vendedor").map((u) => <option key={u.id}>{u.name}</option>)}</Select>
-          <Select><option>Todos professores</option>{data.users.filter((u) => u.role === "professor").map((u) => <option key={u.id}>{u.name}</option>)}</Select>
+          <Select><option>Todos vendedores</option>{data.users.filter((u) => u.role === "vendedor" && u.active).map((u) => <option key={u.id}>{u.name}</option>)}</Select>
+          <Select><option>Todos professores</option>{data.users.filter((u) => u.role === "professor" && u.active).map((u) => <option key={u.id}>{u.name}</option>)}</Select>
           <Button><SlidersHorizontal className="h-4 w-4" /> Filtrar</Button>
         </CardContent>
       </Card>
@@ -323,7 +333,7 @@ export function ReportsPage() {
         <Button variant="secondary"><Download className="h-4 w-4" /> CSV</Button>
         <Button variant="secondary"><Download className="h-4 w-4" /> PDF</Button>
       </div>
-      <DataTable<Sale> data={data.sales} columns={[
+      <DataTable<Sale> data={data.sales.filter(s => data.users.find(u => u.id === s.sellerId)?.active !== false)} columns={[
         { header: "Vendedor", cell: (row) => row.sellerName, priority: "primary" },
         { header: "Aluno", cell: (row) => row.studentName, priority: "secondary" },
         { header: "Tipo", cell: (row) => row.saleType },
@@ -338,7 +348,9 @@ export function ReportsPage() {
 export function HistoryPage() {
   const { data } = useQuery({ queryKey: ["dashboard"], queryFn: getDashboardData });
   if (!data) return null;
-  const records = [...data.sales.map((sale) => ({ type: "Venda", actor: sale.sellerName, description: `${sale.studentName} - ${sale.plan}`, date: sale.soldAt })), ...data.teacherRecords.map((record) => ({ type: "Ficha", actor: record.teacherName, description: `${record.recordsCount} fichas`, date: record.recordDate }))];
+  const activeSales = data.sales.filter(sale => data.users.find(u => u.id === sale.sellerId)?.active !== false);
+  const activeTeacherRecords = data.teacherRecords.filter(record => data.users.find(u => u.id === record.teacherId)?.active !== false);
+  const records = [...activeSales.map((sale) => ({ type: "Venda", actor: sale.sellerName, description: `${sale.studentName} - ${sale.plan}`, date: sale.soldAt })), ...activeTeacherRecords.map((record) => ({ type: "Ficha", actor: record.teacherName, description: `${record.recordsCount} fichas`, date: record.recordDate }))];
   return (
     <Page title="Histórico consolidado" eyebrow="Linha do tempo">
       <DataTable data={records} columns={[
@@ -471,7 +483,7 @@ export function SettingsPage() {
           </form>
         </CardContent>
       </Card>
-      <DataTable<AppUser> data={data.users.filter((user) => user.active)} columns={[
+      <DataTable<AppUser> data={data.users} columns={[
         { header: "Nome", cell: (row) => row.name, priority: "primary" },
         { header: "Email", cell: (row) => row.email, priority: "secondary" },
         { header: "Categoria", cell: (row) => <span className="capitalize">{row.role}</span> },

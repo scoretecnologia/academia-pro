@@ -12,13 +12,13 @@ export function DashboardPage() {
   const { data } = useQuery({ queryKey: ["dashboard"], queryFn: getDashboardData });
   if (!data) return <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-32 animate-pulse rounded-xl bg-muted" />)}</div>;
 
-  const sellerRanking = data.users.filter((user) => user.role === "vendedor").map((seller) => {
+  const sellerRanking = data.users.filter((user) => user.role === "vendedor" && user.active !== false).map((seller) => {
     const total = data.sales.filter((sale) => sale.sellerId === seller.id).reduce((sum, sale) => sum + sale.value, 0);
     const goal = data.salesGoals.find((item) => item.sellerId === seller.id)?.amountGoal ?? 1;
     return { name: seller.name, value: total, target: goal };
   }).sort((a, b) => b.value - a.value);
 
-  const teacherRanking = data.users.filter((user) => user.role === "professor").map((teacher) => {
+  const teacherRanking = data.users.filter((user) => user.role === "professor" && user.active !== false).map((teacher) => {
     const total = data.teacherRecords.filter((record) => record.teacherId === teacher.id).reduce((sum, record) => sum + record.recordsCount, 0);
     const goal = data.teacherGoals.find((item) => item.teacherId === teacher.id)?.monthlyRecordsGoal ?? 1;
     return { name: teacher.name, value: total, target: goal };
@@ -60,7 +60,7 @@ export function DashboardPage() {
       </div>
       <div className="grid gap-5 xl:grid-cols-2">
         <div className="grid gap-3"><h2 className="text-sm font-black">Ultimas vendas</h2>
-        <DataTable<Sale> data={data.sales.slice(0, 5)} columns={[
+        <DataTable<Sale> data={data.sales.filter(s => data.users.find(u => u.id === s.sellerId)?.active !== false).slice(0, 5)} columns={[
           { header: "Vendedor", cell: (row) => row.sellerName, priority: "primary" },
           { header: "Aluno", cell: (row) => row.studentName, priority: "secondary" },
           { header: "Plano", cell: (row) => row.plan },
@@ -68,7 +68,7 @@ export function DashboardPage() {
           { header: "Data", cell: (row) => formatDate(row.soldAt) },
         ]} /></div>
         <div className="grid gap-3"><h2 className="text-sm font-black">Ultimas fichas</h2>
-        <DataTable<TeacherRecord> data={data.teacherRecords.slice(0, 5)} columns={[
+        <DataTable<TeacherRecord> data={data.teacherRecords.filter(r => data.users.find(u => u.id === r.teacherId)?.active !== false).slice(0, 5)} columns={[
           { header: "Professor", cell: (row) => row.teacherName, priority: "primary" },
           { header: "Fichas", cell: (row) => row.recordsCount, priority: "secondary" },
           { header: "Observação", cell: (row) => row.note ?? "Sem observação" },
