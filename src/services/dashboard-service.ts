@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { addMonthsToPeriod, parseMonthYear } from "@/lib/utils";
-import type { Sale, TeacherRecord, AppUser, SalesGoal, TeacherGoal, AuditLog, Role } from "@/types";
+import type { Sale, TeacherRecord, AppUser, SalesGoal, TeacherGoal, Role } from "@/types";
 
 export async function getDashboardData() {
   if (!supabase) throw new Error("Supabase is not configured");
@@ -12,14 +12,12 @@ export async function getDashboardData() {
     { data: salesGoalsData },
     { data: teacherRecordsData },
     { data: teacherGoalsData },
-    { data: auditLogsData },
   ] = await Promise.all([
     supabase.from("users").select("*"),
     supabase.from("sales").select("*, users(nome)"),
     supabase.from("sales_goals").select("*"),
     supabase.from("teacher_records").select("*, users(nome)"),
     supabase.from("teacher_goals").select("*"),
-    supabase.from("audit_logs").select("*, users(nome)"),
   ]);
 
   const users: AppUser[] = (usersData || []).map(u => ({
@@ -73,21 +71,10 @@ export async function getDashboardData() {
     year: g.ano,
   })).sort((a, b) => b.year - a.year || b.month - a.month);
 
-  const auditLogs: AuditLog[] = (auditLogsData || []).map(l => ({
-    id: l.id,
-    userName: l.users?.nome || "Sistema",
-    action: l.acao,
-    tableName: l.tabela,
-    recordId: l.registro_id,
-    details: JSON.stringify(l.detalhes),
-    createdAt: l.created_at,
-  }));
-
   const monthRevenue = sales.reduce((sum, sale) => sum + sale.value, 0);
   const teacherRecordsTotal = teacherRecords.reduce((sum, item) => sum + item.recordsCount, 0);
-  const salesGoalTotal = salesGoals.reduce((sum, goal) => sum + goal.amountGoal, 0) || 1; // avoid division by zero
-  const teacherGoalTotal = teacherGoals.reduce((sum, goal) => sum + goal.monthlyRecordsGoal, 0) || 1;
-  const goalCompletion = ((monthRevenue / salesGoalTotal) * 65 + (teacherRecordsTotal / teacherGoalTotal) * 35);
+  const salesGoalTotal = salesGoals.reduce((sum, goal) => sum + goal.amountGoal, 0);
+  const revenueGoalCompletion = salesGoalTotal > 0 ? (monthRevenue / salesGoalTotal) * 100 : 0;
 
   // Simple revenue series for the chart (grouped by date of the last 7 days)
   const days = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
@@ -106,16 +93,16 @@ export async function getDashboardData() {
     salesGoals,
     teacherRecords,
     teacherGoals,
-    auditLogs,
     revenueSeries,
     metrics: {
       monthRevenue,
+      revenueGoal: salesGoalTotal,
+      revenueGoalCompletion,
       newStudents: sales.filter((sale) => sale.saleType === "Aluno novo").length,
       upgrades: sales.filter((sale) => sale.saleType === "Upgrade").length,
       reactivations: sales.filter((sale) => sale.saleType === "Reativação").length,
       renewals: sales.filter((sale) => sale.saleType === "Renovação").length,
       teacherRecords: teacherRecordsTotal,
-      goalCompletion,
     },
   };
 }
@@ -151,6 +138,51 @@ export async function createSale(payload: Omit<Sale, "id" | "createdAt" | "selle
     soldAt: data.data_venda,
     createdAt: data.created_at,
   } as Sale;
+}
+
+export async function updateSale(saleId: string, payload: Omit<Sale, "id" | "createdAt" | "sellerName">) {
+  if (!supabase) throw new Error("O Supabase não está configurado");
+
+  const { data, error } = await supabase
+    .from("sales")
+    .update({
+      vendedor_id: payload.sellerId,
+      aluno_nome: payload.studentName,
+      tipo_venda: payload.saleType,
+      plano: payload.plan,
+      valor: payload.value,
+      observacao: payload.note,
+      data_venda: payload.soldAt,
+    })
+    .eq("id", saleId)
+    .select("*, users(nome)")
+    .single();
+
+  if (error) throw error;
+
+  return {
+    id: data.id,
+    sellerId: data.vendedor_id,
+    sellerName: data.users?.nome || "Vendedor",
+    studentName: data.aluno_nome,
+    saleType: data.tipo_venda,
+    plan: data.plano,
+    value: Number(data.valor),
+    note: data.observacao,
+    soldAt: data.data_venda,
+    createdAt: data.created_at,
+  } as Sale;
+}
+
+export async function deleteSale(saleId: string) {
+  if (!supabase) throw new Error("O Supabase não está configurado");
+
+  const { error } = await supabase
+    .from("sales")
+    .delete()
+    .eq("id", saleId);
+
+  if (error) throw error;
 }
 
 export async function createTeacherRecord(payload: Omit<TeacherRecord, "id" | "createdAt" | "teacherName">) {
@@ -316,6 +348,16 @@ export async function adminResetUserPassword(userId: string, newPassword: string
   const { error } = await supabase.rpc("admin_reset_user_password", {
     target_user_id: userId,
     new_password: newPassword,
+  });
+
+  if (error) throw error;
+}
+
+export async function deleteUser(userId: string) {
+  if (!supabase) throw new Error("Supabase is not configured");
+
+  const { error } = await supabase.rpc("admin_delete_user", {
+    target_user_id: userId,
   });
 
   if (error) throw error;

@@ -1,4 +1,4 @@
-import type { AppUser, AuditLog, Sale, SalesGoal, TeacherGoal, TeacherRecord } from "@/types";
+import type { AppUser, Sale, SalesGoal, TeacherGoal, TeacherRecord } from "@/types";
 
 export const users: AppUser[] = [
   { id: "u1", name: "Marina Costa", email: "gestor@academiapro.com", role: "gestor", active: true, createdAt: "2026-05-01" },
@@ -32,12 +32,6 @@ export const teacherRecords: TeacherRecord[] = [
 export const teacherGoals: TeacherGoal[] = [
   { id: "tg1", teacherId: "u4", monthlyRecordsGoal: 120, weeklyRecordsGoal: 30, month: 5, year: 2026 },
   { id: "tg2", teacherId: "u5", monthlyRecordsGoal: 110, weeklyRecordsGoal: 28, month: 5, year: 2026 },
-];
-
-export const auditLogs: AuditLog[] = [
-  { id: "a1", userName: "Marina Costa", action: "criou meta", tableName: "sales_goals", recordId: "g1", details: "Meta mensal de Lucas atualizada", createdAt: "2026-05-01 09:10" },
-  { id: "a2", userName: "Lucas Almeida", action: "registrou venda", tableName: "sales", recordId: "s1", details: "Aluno novo - plano anual", createdAt: "2026-05-02 14:20" },
-  { id: "a3", userName: "Rafael Nunes", action: "registrou fichas", tableName: "teacher_records", recordId: "r1", details: "14 fichas criadas", createdAt: "2026-05-03 18:05" },
 ];
 
 export const revenueSeries = [

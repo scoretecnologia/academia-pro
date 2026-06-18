@@ -47,7 +47,7 @@ export function LoginPage() {
             <p className="kicker">Academia Pro</p>
             <h1 className="mt-4 text-5xl font-black tracking-tight text-foreground">Gestão de metas com clareza de board executivo.</h1>
             <p className="mt-6 text-lg text-muted-foreground">
-              Receita, professores, ranking e auditoria em uma operação visualmente limpa, rápida e pronta para escala.
+              Receita, professores, ranking e relatórios em uma operação visualmente limpa, rápida e pronta para escala.
             </p>
             <div className="mt-8 grid max-w-xl grid-cols-3 gap-3">
               {[

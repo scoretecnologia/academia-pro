@@ -2,7 +2,7 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Download, Edit, Plus, Search, Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
@@ -10,7 +10,7 @@ import { Input, Select, Textarea } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/contexts/toast-context";
-import { createSale, getDashboardData } from "@/services/dashboard-service";
+import { createSale, deleteSale, getDashboardData, updateSale } from "@/services/dashboard-service";
 import { saleSchema, type SaleForm } from "@/validations/forms";
 import { currency, formatDate, percentage } from "@/lib/utils";
 import type { Sale } from "@/types";
@@ -20,7 +20,49 @@ export function SellersPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<SaleForm>({ resolver: zodResolver(saleSchema) });
+  const [editingSale, setEditingSale] = useState<Sale | null>(null);
+  const [deletingSale, setDeletingSale] = useState<Sale | null>(null);
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<SaleForm>({
+    resolver: zodResolver(saleSchema),
+    defaultValues: getDefaultSaleValues(),
+  });
+
+  const createSaleMutation = useMutation({
+    mutationFn: createSale,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      closeFormModal();
+      toast({ title: "Venda lancada", description: "O ranking e o dashboard foram atualizados." });
+    },
+    onError: (error) => {
+      toast({ title: "Erro ao salvar venda", description: error instanceof Error ? error.message : "Tente novamente." });
+    },
+  });
+
+  const updateSaleMutation = useMutation({
+    mutationFn: ({ saleId, values }: { saleId: string; values: SaleForm }) => updateSale(saleId, values),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      closeFormModal();
+      toast({ title: "Venda atualizada", description: "As informacoes da venda foram salvas com sucesso." });
+    },
+    onError: (error) => {
+      toast({ title: "Erro ao atualizar venda", description: error instanceof Error ? error.message : "Tente novamente." });
+    },
+  });
+
+  const deleteSaleMutation = useMutation({
+    mutationFn: deleteSale,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      setDeletingSale(null);
+      toast({ title: "Venda removida", description: "O lancamento foi excluido com sucesso." });
+    },
+    onError: (error) => {
+      toast({ title: "Erro ao excluir venda", description: error instanceof Error ? error.message : "Tente novamente." });
+    },
+  });
+
   if (!data) return null;
 
   const sellers = data.users.filter((user) => user.role === "vendedor" && user.active !== false);
@@ -31,12 +73,39 @@ export function SellersPage() {
     return { seller, total, count: sellerSales.length, goal: goal?.amountGoal ?? 0, quantityGoal: goal?.quantityGoal ?? 0 };
   }).sort((a, b) => b.total - a.total);
 
-  async function onSubmit(values: SaleForm) {
-    await createSale(values);
-    await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+  function closeFormModal() {
     setOpen(false);
-    reset();
-    toast({ title: "Venda lancada", description: "O ranking e o dashboard foram atualizados." });
+    setEditingSale(null);
+    reset(getDefaultSaleValues());
+  }
+
+  function openCreateModal() {
+    setEditingSale(null);
+    reset(getDefaultSaleValues());
+    setOpen(true);
+  }
+
+  function openEditModal(sale: Sale) {
+    setEditingSale(sale);
+    reset({
+      sellerId: sale.sellerId,
+      studentName: sale.studentName,
+      saleType: sale.saleType,
+      plan: sale.plan,
+      value: sale.value,
+      soldAt: sale.soldAt,
+      note: sale.note ?? "",
+    });
+    setOpen(true);
+  }
+
+  async function onSubmit(values: SaleForm) {
+    if (editingSale) {
+      updateSaleMutation.mutate({ saleId: editingSale.id, values });
+      return;
+    }
+
+    createSaleMutation.mutate(values);
   }
 
   return (
@@ -48,7 +117,7 @@ export function SellersPage() {
         </div>
         <div className="flex gap-2">
           <Button variant="secondary"><Download className="h-4 w-4" /> Exportar</Button>
-          <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Novo lançamento</Button>
+          <Button onClick={openCreateModal}><Plus className="h-4 w-4" /> Novo lançamento</Button>
         </div>
       </div>
       <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
@@ -92,9 +161,28 @@ export function SellersPage() {
         { header: "Plano", cell: (row) => row.plan },
         { header: "Valor", cell: (row) => currency.format(row.value) },
         { header: "Data", cell: (row) => formatDate(row.soldAt) },
-        { header: "Ações", priority: "actions", className: "w-24", cell: () => <div className="flex gap-1"><Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button><Button variant="ghost" size="icon"><Trash2 className="h-4 w-4" /></Button></div> },
+        {
+          header: "Ações",
+          priority: "actions",
+          className: "w-24",
+          cell: (row) => (
+            <div className="flex gap-1">
+              <Button variant="ghost" size="icon" title="Editar venda" onClick={() => openEditModal(row)}>
+                <Edit className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" title="Apagar venda" onClick={() => setDeletingSale(row)}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ),
+        },
       ]} />
-      <Modal open={open} onClose={() => setOpen(false)} title="Novo lançamento de venda" description="Registre aluno, plano, valor e observações da negociação.">
+      <Modal
+        open={open}
+        onClose={closeFormModal}
+        title={editingSale ? "Editar venda" : "Novo lançamento de venda"}
+        description={editingSale ? "Atualize os dados do lançamento selecionado." : "Registre aluno, plano, valor e observações da negociação."}
+      >
         <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 sm:grid-cols-2">
           <Field label="Vendedor" error={errors.sellerId?.message}><Select {...register("sellerId")}><option value="">Selecione</option>{sellers.map((seller) => <option key={seller.id} value={seller.id}>{seller.name}</option>)}</Select></Field>
           <Field label="Nome do Aluno" error={errors.studentName?.message}><Input {...register("studentName")} /></Field>
@@ -103,8 +191,33 @@ export function SellersPage() {
           <Field label="Valor total" error={errors.value?.message}><Input type="number" step="0.01" {...register("value")} /></Field>
           <Field label="Data da venda" error={errors.soldAt?.message}><Input type="date" {...register("soldAt")} /></Field>
           <label className="grid gap-2 text-sm font-semibold sm:col-span-2">Observação<Textarea {...register("note")} /></label>
-          <div className="flex justify-end gap-2 sm:col-span-2"><Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button><Button type="submit">Salvar venda</Button></div>
+          <div className="flex justify-end gap-2 sm:col-span-2">
+            <Button type="button" variant="secondary" onClick={closeFormModal}>Cancelar</Button>
+            <Button type="submit" disabled={createSaleMutation.isPending || updateSaleMutation.isPending}>
+              {editingSale ? "Salvar alteracoes" : "Salvar venda"}
+            </Button>
+          </div>
         </form>
+      </Modal>
+      <Modal
+        open={Boolean(deletingSale)}
+        onClose={() => setDeletingSale(null)}
+        title="Apagar venda"
+        description={deletingSale ? `Tem certeza que deseja apagar a venda de ${deletingSale.studentName}?` : undefined}
+      >
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={() => setDeletingSale(null)}>
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            variant="danger"
+            onClick={() => deletingSale && deleteSaleMutation.mutate(deletingSale.id)}
+            disabled={deleteSaleMutation.isPending}
+          >
+            Apagar venda
+          </Button>
+        </div>
       </Modal>
     </div>
   );
@@ -112,4 +225,16 @@ export function SellersPage() {
 
 function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return <label className="grid gap-2 text-sm font-semibold">{label}{children}{error ? <span className="text-xs text-destructive">{error}</span> : null}</label>;
+}
+
+function getDefaultSaleValues(): SaleForm {
+  return {
+    sellerId: "",
+    studentName: "",
+    saleType: "Aluno novo",
+    plan: "Mensal",
+    value: 0,
+    soldAt: new Date().toISOString().slice(0, 10),
+    note: "",
+  };
 }

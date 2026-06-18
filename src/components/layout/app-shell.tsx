@@ -1,12 +1,12 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { BarChart3, ChevronLeft, ChevronRight, ClipboardList, Dumbbell, FileBarChart, History, LogOut, Menu, Settings, ShieldCheck, Sparkles, Target, Trophy } from "lucide-react";
+import { BarChart3, ChevronLeft, ChevronRight, ClipboardList, Dumbbell, FileBarChart, LogOut, Menu, Settings, Sparkles, Target, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/auth-context";
 import { cn } from "@/lib/utils";
 import type { Role } from "@/types";
 
-type PageKey = "dashboard" | "vendedores" | "professores" | "metas" | "relatorios" | "historico" | "auditoria" | "configuracoes";
+type PageKey = "dashboard" | "vendedores" | "professores" | "metas" | "relatorios" | "configuracoes";
 
 const navItems: { key: PageKey; label: string; icon: React.ElementType; roles: Role[] }[] = [
   { key: "dashboard", label: "Dashboard", icon: BarChart3, roles: ["gestor", "vendedor", "professor"] },
@@ -14,8 +14,6 @@ const navItems: { key: PageKey; label: string; icon: React.ElementType; roles: R
   { key: "professores", label: "Professores", icon: Dumbbell, roles: ["gestor", "professor"] },
   { key: "metas", label: "Metas", icon: Target, roles: ["gestor"] },
   { key: "relatorios", label: "Relatórios", icon: FileBarChart, roles: ["gestor"] },
-  { key: "historico", label: "Histórico", icon: History, roles: ["gestor", "vendedor", "professor"] },
-  { key: "auditoria", label: "Auditoria", icon: ShieldCheck, roles: ["gestor"] },
   { key: "configuracoes", label: "Configurações", icon: Settings, roles: ["gestor"] },
 ];
 
@@ -30,7 +28,7 @@ export function AppShell({
 }) {
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
 
   const visibleItems = useMemo(() => navItems.filter((item) => user && item.roles.includes(user.role)), [user]);
 
@@ -60,7 +58,7 @@ export function AppShell({
             {!collapsed && (
               <div className="min-w-0">
                 <p className="truncate text-xs font-black">Operação em tempo real</p>
-                <p className="text-[11px] font-semibold text-muted-foreground">Metas, ranking e auditoria</p>
+                <p className="text-[11px] font-semibold text-muted-foreground">Metas, ranking e relatórios</p>
               </div>
             )}
           </div>
@@ -77,6 +75,7 @@ export function AppShell({
                 setMenuOpen(false);
               }}
               title={collapsed ? item.label : undefined}
+              aria-label={collapsed ? item.label : undefined}
               className={cn(
                 "group flex h-10 items-center rounded-lg text-sm font-bold text-muted-foreground transition hover:bg-muted hover:text-foreground",
                 collapsed ? "justify-center px-0" : "gap-3 px-3",
@@ -128,7 +127,14 @@ export function AppShell({
         ) : null}
         <main className="min-w-0 flex-1">
           <header className="sticky top-0 z-30 flex h-[72px] items-center gap-3 border-b border-border/70 bg-background/82 px-4 backdrop-blur-2xl sm:px-6">
-            <Button variant="ghost" size="icon" className="hidden lg:flex" onClick={() => setCollapsed(!collapsed)}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="hidden lg:flex"
+              onClick={() => setCollapsed(!collapsed)}
+              title={collapsed ? "Expandir menu" : "Recolher menu"}
+              aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
+            >
               <ChevronLeft className={cn("h-5 w-5 transition-transform duration-300", collapsed && "rotate-180")} />
             </Button>
             <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMenuOpen(true)}>

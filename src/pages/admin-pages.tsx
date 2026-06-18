@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CalendarRange, Download, FileSpreadsheet, KeyRound, Loader2, Plus, Repeat2, ShieldCheck, SlidersHorizontal, UserCog } from "lucide-react";
+import { CalendarRange, Download, FileSpreadsheet, KeyRound, Loader2, Plus, Repeat2, ShieldCheck, SlidersHorizontal, Trash2, UserCog } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -9,11 +9,12 @@ import { DataTable } from "@/components/ui/data-table";
 import { Input, Select } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { Progress } from "@/components/ui/progress";
+import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/contexts/toast-context";
-import { createAppUser, getDashboardData, saveGoalPlan, updateUser, adminResetUserPassword } from "@/services/dashboard-service";
+import { createAppUser, deleteUser, getDashboardData, saveGoalPlan, updateUser, adminResetUserPassword } from "@/services/dashboard-service";
 import { currency, formatDate, formatMonthYear, monthNames, sameMonthYear } from "@/lib/utils";
 import { goalSchema, userSchema, type GoalForm, type UserForm } from "@/validations/forms";
-import type { AppUser, AuditLog, Sale } from "@/types";
+import type { AppUser, Sale } from "@/types";
 
 type SelectedGoal = {
   label: string;
@@ -345,49 +346,15 @@ export function ReportsPage() {
   );
 }
 
-export function HistoryPage() {
-  const { data } = useQuery({ queryKey: ["dashboard"], queryFn: getDashboardData });
-  if (!data) return null;
-  const activeSales = data.sales.filter(sale => data.users.find(u => u.id === sale.sellerId)?.active !== false);
-  const activeTeacherRecords = data.teacherRecords.filter(record => data.users.find(u => u.id === record.teacherId)?.active !== false);
-  const records = [...activeSales.map((sale) => ({ type: "Venda", actor: sale.sellerName, description: `${sale.studentName} - ${sale.plan}`, date: sale.soldAt })), ...activeTeacherRecords.map((record) => ({ type: "Ficha", actor: record.teacherName, description: `${record.recordsCount} fichas`, date: record.recordDate }))];
-  return (
-    <Page title="Histórico consolidado" eyebrow="Linha do tempo">
-      <DataTable data={records} columns={[
-        { header: "Tipo", cell: (row) => row.type, priority: "secondary" },
-        { header: "Responsável", cell: (row) => row.actor, priority: "primary" },
-        { header: "Observação", cell: (row) => "Sem observação" },
-        { header: "Descrição", cell: (row) => row.description },
-        { header: "Data", cell: (row) => formatDate(row.date) },
-      ]} />
-    </Page>
-  );
-}
-
-export function AuditPage() {
-  const { data } = useQuery({ queryKey: ["dashboard"], queryFn: getDashboardData });
-  if (!data) return null;
-  return (
-    <Page title="Auditoria" eyebrow="Segurança">
-      <DataTable<AuditLog> data={data.auditLogs} columns={[
-        { header: "Usuário", cell: (row) => row.userName, priority: "primary" },
-        { header: "Ação", cell: (row) => row.action, priority: "secondary" },
-        { header: "Tabela", cell: (row) => row.tableName },
-        { header: "Registro", cell: (row) => row.recordId },
-        { header: "Detalhes", cell: (row) => row.details },
-        { header: "Data", cell: (row) => formatDate(row.createdAt) },
-      ]} />
-    </Page>
-  );
-}
-
 export function SettingsPage() {
+  const { user } = useAuth();
   const { data } = useQuery({ queryKey: ["dashboard"], queryFn: getDashboardData });
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [editingUser, setEditingUser] = useState<AppUser | null>(null);
   const [confirmingStatusUser, setConfirmingStatusUser] = useState<AppUser | null>(null);
   const [resettingPasswordUser, setResettingPasswordUser] = useState<AppUser | null>(null);
+  const [deletingUser, setDeletingUser] = useState<AppUser | null>(null);
   const [newPassword, setNewPassword] = useState("");
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<UserForm>({
@@ -437,6 +404,18 @@ export function SettingsPage() {
     },
     onError: (error) => {
       toast({ title: "Erro na redefinição", description: error instanceof Error ? error.message : "Tente novamente." });
+    },
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: (userId: string) => deleteUser(userId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      toast({ title: "Usuário apagado", description: "O usuário e os dados vinculados foram removidos com sucesso." });
+      setDeletingUser(null);
+    },
+    onError: (error) => {
+      toast({ title: "Erro ao apagar", description: error instanceof Error ? error.message : "Tente novamente." });
     },
   });
 
@@ -509,7 +488,7 @@ export function SettingsPage() {
         { 
           header: "Ações", 
           priority: "actions", 
-          className: "w-32", 
+          className: "w-40", 
           cell: (row) => (
             <div className="flex gap-1">
               <Button variant="ghost" size="icon" title="Editar usuário" onClick={() => handleEditClick(row)}><UserCog className="h-4 w-4" /></Button>
@@ -522,6 +501,16 @@ export function SettingsPage() {
                 className={row.active ? "text-primary" : "text-destructive"}
               >
                 <ShieldCheck className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                title={row.id === user?.id ? "Você não pode apagar seu próprio usuário" : "Apagar usuário"}
+                onClick={() => setDeletingUser(row)}
+                className="text-destructive hover:text-destructive"
+                disabled={row.id === user?.id}
+              >
+                <Trash2 className="h-4 w-4" />
               </Button>
             </div>
           ) 
@@ -611,6 +600,32 @@ export function SettingsPage() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        open={Boolean(deletingUser)}
+        onClose={() => setDeletingUser(null)}
+        title="Apagar Usuário"
+        description={deletingUser ? `Tem certeza que deseja apagar ${deletingUser.name}? Vendas, fichas e metas vinculadas tambem serao removidas.` : undefined}
+      >
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="secondary" onClick={() => setDeletingUser(null)}>
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            variant="danger"
+            onClick={() => {
+              if (deletingUser) {
+                deleteUserMutation.mutate(deletingUser.id);
+              }
+            }}
+            disabled={deleteUserMutation.isPending}
+          >
+            {deleteUserMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+            Apagar usuário
+          </Button>
+        </div>
       </Modal>
     </Page>
   );

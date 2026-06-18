@@ -59,22 +59,13 @@ export type TeacherRecord = {
   createdAt: string;
 };
 
-export type AuditLog = {
-  id: string;
-  userName: string;
-  action: string;
-  tableName: string;
-  recordId: string;
-  details: string;
-  createdAt: string;
-};
-
 export type DashboardMetrics = {
   monthRevenue: number;
+  revenueGoal: number;
+  revenueGoalCompletion: number;
   newStudents: number;
   upgrades: number;
   reactivations: number;
   renewals: number;
   teacherRecords: number;
-  goalCompletion: number;
 };
